@@ -1,8 +1,12 @@
-__pycache__/
-*.py[cod]
 *.egg-info/
+*.py[cod]
+*.pyc
 .build/
-.venv/
-venv/
 .env
+.env.*
 .kdp_bible/
+.venv/
+__pycache__/
+dist/*.tmp
+node_modules/
+venv/
