@@ -10,6 +10,7 @@ import argparse
 import sys
 from typing import Optional, Sequence
 
+from . import __version__
 from .models import (
     Bible,
     Character,
@@ -22,8 +23,38 @@ from .storage import Storage, load_bible, save_bible, export_markdown
 from .validator import validate_bible
 
 
+def _extract_dir(argv: Sequence[str]) -> tuple[str, list[str]]:
+    """Pull --dir (and --dir=value) out of argv wherever it appears.
+
+    argparse only honors global options before the subcommand, so we extract
+    --dir ourselves so it works no matter where the user puts it.
+    """
+    directory = ".kdp_bible"
+    cleaned: list[str] = []
+    skip_next = False
+    for index, token in enumerate(argv):
+        if skip_next:
+            skip_next = False
+            continue
+        if token == "--dir":
+            if index + 1 < len(argv):
+                directory = argv[index + 1]
+                skip_next = True
+            continue
+        if token.startswith("--dir="):
+            directory = token.split("=", 1)[1]
+            continue
+        cleaned.append(token)
+    return directory, cleaned
+
+
 def _storage_for(args) -> Storage:
     return Storage(args.dir)
+
+
+def cmd_version(args) -> int:
+    print(f"kdp-series-bible {__version__}")
+    return 0
 
 
 def cmd_init(args) -> int:
@@ -218,6 +249,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("list", help="Summarize the bible").set_defaults(func=cmd_list)
     sub.add_parser("validate", help="Validate the bible").set_defaults(func=cmd_validate)
+    sub.add_parser("version", help="Show the version").set_defaults(func=cmd_version)
 
     p_md = sub.add_parser("export-md", help="Export the bible to Markdown")
     p_md.add_argument("output", nargs="?", help="Output Markdown file (prints to stdout if omitted)")
@@ -227,8 +259,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if "--version" in argv:
+        print(f"kdp-series-bible {__version__}")
+        return 0
+    directory, cleaned = _extract_dir(argv)
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(cleaned)
+    args.dir = directory
     return args.func(args)
 
 
